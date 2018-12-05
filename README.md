@@ -61,6 +61,9 @@ Broker View
 
 ![broker](/img/broker.png)
 
+Update Offset
+
+![offset](/img/broker.png)
 ***
 
 Requirements
