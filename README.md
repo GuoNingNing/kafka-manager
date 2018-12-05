@@ -63,7 +63,7 @@ Broker View
 
 Update Offset
 
-![offset](/img/broker.png)
+![offset](/img/offset.png)
 ***
 
 Requirements
