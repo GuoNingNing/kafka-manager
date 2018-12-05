@@ -1,7 +1,7 @@
 /**
- * Copyright 2015 Yahoo Inc. Licensed under the Apache License, Version 2.0
- * See accompanying LICENSE file.
- */
+  * Copyright 2015 Yahoo Inc. Licensed under the Apache License, Version 2.0
+  * See accompanying LICENSE file.
+  */
 
 package kafka.manager.actor
 
@@ -25,13 +25,13 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
 /**
- * @author hiral
- */
+  * @author hiral
+  */
 
 object KafkaManagerActor {
-  val ZkRoot : String = "/kafka-manager"
+  val ZkRoot: String = "/kafka-manager"
 
-  def getClusterPath(config: ClusterConfig) : String = s"$ZkRoot/${config.name}"
+  def getClusterPath(config: ClusterConfig): String = s"$ZkRoot/${config.name}"
 
 }
 
@@ -41,29 +41,30 @@ import scala.collection.JavaConverters._
 import scala.concurrent.duration._
 
 case class KafkaManagerActorConfig(curatorConfig: CuratorConfig
-                                   , baseZkPath : String = KafkaManagerActor.ZkRoot
-                                   , pinnedDispatcherName : String = "pinned-dispatcher"
+                                   , baseZkPath: String = KafkaManagerActor.ZkRoot
+                                   , pinnedDispatcherName: String = "pinned-dispatcher"
                                    , startDelayMillis: Long = 1000
                                    , threadPoolSize: Int = 2
                                    , mutexTimeoutMillis: Int = 4000
                                    , maxQueueSize: Int = 100
                                    , kafkaManagerUpdatePeriod: FiniteDuration = 10 seconds
                                    , deleteClusterUpdatePeriod: FiniteDuration = 10 seconds
-                                   , deletionBatchSize : Int = 2
+                                   , deletionBatchSize: Int = 2
                                    , clusterActorsAskTimeoutMillis: Int = 2000
-                                   , simpleConsumerSocketTimeoutMillis : Int = 10000
+                                   , simpleConsumerSocketTimeoutMillis: Int = 10000
                                    , defaultTuning: ClusterTuning
                                    , consumerProperties: Option[Properties]
                                   )
+
 class KafkaManagerActor(kafkaManagerConfig: KafkaManagerActorConfig)
   extends BaseQueryCommandActor with CuratorAwareActor with BaseZkPath {
 
   //this is for baze zk path trait
-  override def baseZkPath : String = kafkaManagerConfig.baseZkPath
+  override def baseZkPath: String = kafkaManagerConfig.baseZkPath
 
   //this is for curator aware actor
   override def curatorConfig: CuratorConfig = kafkaManagerConfig.curatorConfig
-  
+
   private[this] val baseClusterZkPath = zkPath("clusters")
   private[this] val configsZkPath = zkPath("configs")
   private[this] val deleteClustersZkPath = zkPath("deleteClusters")
@@ -73,19 +74,19 @@ class KafkaManagerActor(kafkaManagerConfig: KafkaManagerActorConfig)
 
   //create kafka manager base path
   Try(curator.create().creatingParentsIfNeeded().withMode(CreateMode.PERSISTENT).forPath(baseZkPath))
-  require(curator.checkExists().forPath(baseZkPath) != null,s"Kafka manager base path not found : $baseZkPath")
+  require(curator.checkExists().forPath(baseZkPath) != null, s"Kafka manager base path not found : $baseZkPath")
 
   //create kafka manager base clusters path
   Try(curator.create().creatingParentsIfNeeded().withMode(CreateMode.PERSISTENT).forPath(baseClusterZkPath))
-  require(curator.checkExists().forPath(baseClusterZkPath) != null,s"Kafka manager base clusters path not found : $baseClusterZkPath")
+  require(curator.checkExists().forPath(baseClusterZkPath) != null, s"Kafka manager base clusters path not found : $baseClusterZkPath")
 
   //create kafka manager delete clusters path
   Try(curator.create().creatingParentsIfNeeded().withMode(CreateMode.PERSISTENT).forPath(deleteClustersZkPath))
-  require(curator.checkExists().forPath(deleteClustersZkPath) != null,s"Kafka manager delete clusters path not found : $deleteClustersZkPath")
+  require(curator.checkExists().forPath(deleteClustersZkPath) != null, s"Kafka manager delete clusters path not found : $deleteClustersZkPath")
 
   //create kafka manager configs path
   Try(curator.create().creatingParentsIfNeeded().withMode(CreateMode.PERSISTENT).forPath(configsZkPath))
-  require(curator.checkExists().forPath(configsZkPath) != null,s"Kafka manager configs path not found : $configsZkPath")
+  require(curator.checkExists().forPath(configsZkPath) != null, s"Kafka manager configs path not found : $configsZkPath")
 
   private[this] val longRunningExecutor = new ThreadPoolExecutor(
     kafkaManagerConfig.threadPoolSize,
@@ -96,7 +97,7 @@ class KafkaManagerActor(kafkaManagerConfig: KafkaManagerActorConfig)
 
   private[this] val longRunningExecutionContext = ExecutionContext.fromExecutor(longRunningExecutor)
 
-  private[this] val kafkaManagerPathCache = new PathChildrenCache(curator,configsZkPath,true)
+  private[this] val kafkaManagerPathCache = new PathChildrenCache(curator, configsZkPath, true)
 
   private[this] val mutex = new InterProcessSemaphoreMutex(curator, zkPath("mutex"))
 
@@ -108,12 +109,12 @@ class KafkaManagerActor(kafkaManagerConfig: KafkaManagerActorConfig)
       configsZkPath,
       kafkaManagerConfig.deleteClusterUpdatePeriod,
       kafkaManagerConfig.deletionBatchSize)
-    Props(classOf[DeleteClusterActor],dcConfig)
+    Props(classOf[DeleteClusterActor], dcConfig)
   }
 
-  private[this] val deleteClustersActor: ActorPath = context.actorOf(dcProps.withDispatcher(kafkaManagerConfig.pinnedDispatcherName),"delete-cluster").path
+  private[this] val deleteClustersActor: ActorPath = context.actorOf(dcProps.withDispatcher(kafkaManagerConfig.pinnedDispatcherName), "delete-cluster").path
 
-  private[this] val deleteClustersPathCache = new PathChildrenCache(curator,deleteClustersZkPath,true)
+  private[this] val deleteClustersPathCache = new PathChildrenCache(curator, deleteClustersZkPath, true)
 
   private[this] val pathCacheListener = new PathChildrenCacheListener {
     override def childEvent(client: CuratorFramework, event: PathChildrenCacheEvent): Unit = {
@@ -134,24 +135,24 @@ class KafkaManagerActor(kafkaManagerConfig: KafkaManagerActorConfig)
 
   private[this] var lastUpdateMillis: Long = 0L
 
-  private[this] var clusterManagerMap : Map[String,ActorPath] = Map.empty
-  private[this] var clusterConfigMap : Map[String,ClusterConfig] = Map.empty
-  private[this] var pendingClusterConfigMap : Map[String,ClusterConfig] = Map.empty
+  private[this] var clusterManagerMap: Map[String, ActorPath] = Map.empty
+  private[this] var clusterConfigMap: Map[String, ClusterConfig] = Map.empty
+  private[this] var pendingClusterConfigMap: Map[String, ClusterConfig] = Map.empty
 
-  private[this] def modify(fn: => Any) : Unit = {
-    if(longRunningExecutor.getQueue.remainingCapacity() == 0) {
+  private[this] def modify(fn: => Any): Unit = {
+    if (longRunningExecutor.getQueue.remainingCapacity() == 0) {
       Future.successful(KMCommandResult(Try(throw new UnsupportedOperationException("Long running executor blocking queue is full!"))))
     } else {
       implicit val ec = longRunningExecutionContext
       Future {
         try {
           log.debug(s"Acquiring kafka manager mutex...")
-          mutex.acquire(kafkaManagerConfig.mutexTimeoutMillis,TimeUnit.MILLISECONDS)
+          mutex.acquire(kafkaManagerConfig.mutexTimeoutMillis, TimeUnit.MILLISECONDS)
           KMCommandResult(Try {
             fn
           })
         } finally {
-          if(mutex.isAcquiredInThisProcess) {
+          if (mutex.isAcquiredInThisProcess) {
             log.debug(s"Releasing kafka manger mutex...")
             mutex.release()
           }
@@ -179,7 +180,7 @@ class KafkaManagerActor(kafkaManagerConfig: KafkaManagerActorConfig)
     implicit val ec = longRunningExecutionContext
     //schedule periodic forced update
     context.system.scheduler.schedule(
-      Duration(kafkaManagerConfig.startDelayMillis,TimeUnit.MILLISECONDS),kafkaManagerConfig.kafkaManagerUpdatePeriod) {
+      Duration(kafkaManagerConfig.startDelayMillis, TimeUnit.MILLISECONDS), kafkaManagerConfig.kafkaManagerUpdatePeriod) {
       self ! KMUpdateState
     }
   }
@@ -217,7 +218,7 @@ class KafkaManagerActor(kafkaManagerConfig: KafkaManagerActorConfig)
     }
   }
 
-  
+
   override def processQueryRequest(request: QueryRequest): Unit = {
     request match {
       case KMGetActiveClusters =>
@@ -233,17 +234,20 @@ class KafkaManagerActor(kafkaManagerConfig: KafkaManagerActorConfig)
           cc.get
         })
 
+      // Kafka 集群查询
       case KMClusterQueryRequest(clusterName, request) =>
         clusterManagerMap.get(clusterName).fold[Unit] {
+          log.error(s"Unknown cluster : $clusterName")
           sender ! ActorErrorResponse(s"Unknown cluster : $clusterName")
         } {
-          clusterManagerPath:ActorPath =>
+          clusterManagerPath: ActorPath =>
+            log.info(s"${clusterManagerPath.name} request $request")
             context.actorSelection(clusterManagerPath).forward(request)
         }
-        
+
       case any: Any => log.warning("kma : processQueryRequest : Received unknown message: {}", any)
     }
-    
+
   }
 
   override def processCommandRequest(request: CommandRequest): Unit = {
@@ -350,7 +354,7 @@ class KafkaManagerActor(kafkaManagerConfig: KafkaManagerActorConfig)
         clusterManagerMap.get(clusterName).fold[Unit] {
           sender ! ActorErrorResponse(s"Unknown cluster : $clusterName")
         } {
-          clusterManagerPath:ActorPath =>
+          clusterManagerPath: ActorPath =>
             context.actorSelection(clusterManagerPath).forward(request)
         }
 
@@ -369,39 +373,39 @@ class KafkaManagerActor(kafkaManagerConfig: KafkaManagerActorConfig)
     }
   }
 
-  private[this] def getDeleteClusterZkPath(clusterName: String) : String = {
-    zkPathFrom(deleteClustersZkPath,clusterName)
+  private[this] def getDeleteClusterZkPath(clusterName: String): String = {
+    zkPathFrom(deleteClustersZkPath, clusterName)
   }
 
-  private[this] def getConfigsZkPath(clusterConfig: ClusterConfig) : String = {
-    zkPathFrom(configsZkPath,clusterConfig.name)
+  private[this] def getConfigsZkPath(clusterConfig: ClusterConfig): String = {
+    zkPathFrom(configsZkPath, clusterConfig.name)
   }
 
-  private[this] def getClusterZkPath(clusterConfig: ClusterConfig) : String = {
-    zkPathFrom(baseClusterZkPath,clusterConfig.name)
+  private[this] def getClusterZkPath(clusterConfig: ClusterConfig): String = {
+    zkPathFrom(baseClusterZkPath, clusterConfig.name)
   }
 
-  private[this] def markPendingClusterManager(clusterConfig: ClusterConfig) : Unit = {
+  private[this] def markPendingClusterManager(clusterConfig: ClusterConfig): Unit = {
     implicit val ec = context.system.dispatcher
     log.info(s"Mark pending cluster manager $clusterConfig")
     pendingClusterConfigMap += (clusterConfig.name -> clusterConfig)
   }
 
-  private[this] def removeClusterManager(clusterConfig: ClusterConfig) : Unit = {
+  private[this] def removeClusterManager(clusterConfig: ClusterConfig): Unit = {
     implicit val ec = context.system.dispatcher
     clusterManagerMap.get(clusterConfig.name).foreach { actorPath =>
       log.info(s"Removing cluster manager $clusterConfig")
       val selection = context.actorSelection(actorPath)
-      selection.tell(CMShutdown,self)
+      selection.tell(CMShutdown, self)
 
       //this is non-blocking
-      selection.resolveOne(1 seconds).foreach( ref => context.stop(ref) )
+      selection.resolveOne(1 seconds).foreach(ref => context.stop(ref))
     }
     clusterManagerMap -= clusterConfig.name
     clusterConfigMap -= clusterConfig.name
   }
 
-  private[this] def getConfigWithDefaults(config: ClusterConfig, kmConfig: KafkaManagerActorConfig) : ClusterConfig = {
+  private[this] def getConfigWithDefaults(config: ClusterConfig, kmConfig: KafkaManagerActorConfig): ClusterConfig = {
     val brokerViewUpdatePeriodSeconds = config.tuning.flatMap(_.brokerViewUpdatePeriodSeconds) orElse kmConfig.defaultTuning.brokerViewUpdatePeriodSeconds
     val clusterManagerThreadPoolSize = config.tuning.flatMap(_.clusterManagerThreadPoolSize) orElse kmConfig.defaultTuning.clusterManagerThreadPoolSize
     val clusterManagerThreadPoolQueueSize = config.tuning.flatMap(_.clusterManagerThreadPoolQueueSize) orElse kmConfig.defaultTuning.clusterManagerThreadPoolQueueSize
@@ -447,9 +451,10 @@ class KafkaManagerActor(kafkaManagerConfig: KafkaManagerActorConfig)
       tuning = tuning
     )
   }
+
   private[this] def addCluster(config: ClusterConfig): Try[Boolean] = {
     Try {
-      if(!config.enabled) {
+      if (!config.enabled) {
         log.info("Not adding cluster manager for disabled cluster : {}", config.name)
         clusterConfigMap += (config.name -> config)
         pendingClusterConfigMap -= config.name
@@ -478,7 +483,7 @@ class KafkaManagerActor(kafkaManagerConfig: KafkaManagerActorConfig)
 
   private[this] def updateCluster(currentConfig: ClusterConfig, newConfig: ClusterConfig): Try[Boolean] = {
     Try {
-      if(newConfig.curatorConfig.zkConnect == currentConfig.curatorConfig.zkConnect
+      if (newConfig.curatorConfig.zkConnect == currentConfig.curatorConfig.zkConnect
         && newConfig.enabled == currentConfig.enabled
         && newConfig.version == currentConfig.version
         && newConfig.jmxEnabled == currentConfig.jmxEnabled
@@ -500,7 +505,7 @@ class KafkaManagerActor(kafkaManagerConfig: KafkaManagerActorConfig)
       } else {
         //only need to shutdown enabled cluster
         log.info("Updating cluster manager for cluster={} , old={}, new={}",
-          currentConfig.name,currentConfig,newConfig)
+          currentConfig.name, currentConfig, newConfig)
         markPendingClusterManager(newConfig)
         removeClusterManager(currentConfig)
         true
@@ -514,16 +519,16 @@ class KafkaManagerActor(kafkaManagerConfig: KafkaManagerActorConfig)
       kafkaManagerPathCache.getCurrentData.asScala.foreach { data =>
         ClusterConfig.deserialize(data.getData) match {
           case Failure(t) =>
-            log.error("Failed to deserialize cluster config",t)
+            log.error("Failed to deserialize cluster config", t)
           case Success(newConfig) =>
             val configWithDefaults = getConfigWithDefaults(newConfig, kafkaManagerConfig)
-            clusterConfigMap.get(newConfig.name).fold(addCluster(configWithDefaults))(updateCluster(_,configWithDefaults))
+            clusterConfigMap.get(newConfig.name).fold(addCluster(configWithDefaults))(updateCluster(_, configWithDefaults))
         }
       }
     }
     result match {
       case Failure(t) =>
-        log.error("Failed to update internal state ... ",t)
+        log.error("Failed to update internal state ... ", t)
       case _ =>
     }
     lastUpdateMillis = System.currentTimeMillis()
@@ -534,8 +539,8 @@ class KafkaManagerActor(kafkaManagerConfig: KafkaManagerActorConfig)
     Try {
       val localClusterConfigMap = clusterConfigMap
       localClusterConfigMap.foreach { case (name, clusterConfig) =>
-        val zkpath : String = getConfigsZkPath(clusterConfig)
-        if(kafkaManagerPathCache.getCurrentData(zkpath) == null) {
+        val zkpath: String = getConfigsZkPath(clusterConfig)
+        if (kafkaManagerPathCache.getCurrentData(zkpath) == null) {
           pendingClusterConfigMap -= clusterConfig.name
           removeClusterManager(clusterConfig)
           clusterConfigMap -= name

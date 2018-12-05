@@ -19,7 +19,8 @@ It supports the following :
  - Update config for existing topic
  - Optionally enable JMX polling for broker level and topic level metrics.
  - Optionally filter out consumers that do not have ids/ owners/ & offsets/ directories in zookeeper.
-
+ - Increase of deposit in Offset Hbase management (need to use the fire-spark HbaseOffsetsManager).
+  
 Cluster Management
 
 ![cluster](/img/cluster.png)
@@ -112,6 +113,16 @@ The follow control consumer offset cache's thread pool and queue :
  - kafka-manager.offset-cache-max-queue-size=< default is 1000>
  - kafka-manager.kafka-admin-client-thread-pool-size=< default is # of processors>
  - kafka-manager.kafka-admin-client-max-queue-size=< default is 1000>
+
+Here is an example for a hbase offset manager
+    
+    offset.store {
+      hbase.table = "consumer_offsets"
+      hbase.family = "topic_partition_offset"
+      hbase.master = "localhost:60000"
+      hbase.zookeeper.quorum = "localhost"
+      hbase.zookeeper.property.clientPort = 2181
+    }
 
 You should increase the above for large # of consumers with consumer polling enabled.  Though it mainly affects ZK based consumer polling.
 

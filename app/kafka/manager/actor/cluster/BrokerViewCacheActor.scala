@@ -1,7 +1,7 @@
 /**
- * Copyright 2015 Yahoo Inc. Licensed under the Apache License, Version 2.0
- * See accompanying LICENSE file.
- */
+  * Copyright 2015 Yahoo Inc. Licensed under the Apache License, Version 2.0
+  * See accompanying LICENSE file.
+  */
 
 package kafka.manager.actor.cluster
 
@@ -21,38 +21,41 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 
 /**
- * @author hiral
- */
+  * @author hiral
+  */
+
 import kafka.manager.model.ActorModel._
+
 case class BrokerViewCacheActorConfig(kafkaStateActorPath: ActorPath,
                                       clusterContext: ClusterContext,
                                       longRunningPoolConfig: LongRunningPoolConfig,
                                       updatePeriod: FiniteDuration = 10 seconds)
+
 class BrokerViewCacheActor(config: BrokerViewCacheActorConfig) extends LongRunningPoolActor with BaseClusterActor {
 
   protected implicit val clusterContext: ClusterContext = config.clusterContext
 
   private[this] val ZERO = BigDecimal(0)
 
-  private[this] var cancellable : Option[Cancellable] = None
+  private[this] var cancellable: Option[Cancellable] = None
 
-  private[this] var topicIdentities : Map[String, TopicIdentity] = Map.empty
+  private[this] var topicIdentities: Map[String, TopicIdentity] = Map.empty
 
-  private[this] var previousTopicDescriptionsOption : Option[TopicDescriptions] = None
-  
-  private[this] var topicDescriptionsOption : Option[TopicDescriptions] = None
+  private[this] var previousTopicDescriptionsOption: Option[TopicDescriptions] = None
 
-  private[this] var topicConsumerMap : Map[String, Iterable[(String, ConsumerType)]] = Map.empty
+  private[this] var topicDescriptionsOption: Option[TopicDescriptions] = None
 
-  private[this] var consumerIdentities : Map[(String, ConsumerType), ConsumerIdentity] = Map.empty
+  private[this] var topicConsumerMap: Map[String, Iterable[(String, ConsumerType)]] = Map.empty
 
-  private[this] var consumerDescriptionsOption : Option[ConsumerDescriptions] = None
+  private[this] var consumerIdentities: Map[(String, ConsumerType), ConsumerIdentity] = Map.empty
 
-  private[this] var brokerListOption : Option[BrokerList] = None
+  private[this] var consumerDescriptionsOption: Option[ConsumerDescriptions] = None
 
-  private[this] var brokerMetrics : Map[Int, BrokerMetrics] = Map.empty
+  private[this] var brokerListOption: Option[BrokerList] = None
 
-  private[this] val brokerTopicPartitions : mutable.Map[Int, BVView] = new mutable.HashMap[Int, BVView]
+  private[this] var brokerMetrics: Map[Int, BrokerMetrics] = Map.empty
+
+  private[this] val brokerTopicPartitions: mutable.Map[Int, BVView] = new mutable.HashMap[Int, BVView]
 
   private[this] val topicMetrics: mutable.Map[String, mutable.Map[Int, BrokerMetrics]] =
     new mutable.HashMap[String, mutable.Map[Int, BrokerMetrics]]()
@@ -61,11 +64,11 @@ class BrokerViewCacheActor(config: BrokerViewCacheActorConfig) extends LongRunni
   private[this] val brokerTopicPartitionSizes: mutable.Map[String, mutable.Map[Int, mutable.Map[Int, Long]]] =
     new mutable.HashMap[String, mutable.Map[Int, mutable.Map[Int, Long]]]()
 
-  private[this] var combinedBrokerMetric : Option[BrokerMetrics] = None
+  private[this] var combinedBrokerMetric: Option[BrokerMetrics] = None
 
   private[this] val EMPTY_BVVIEW = BVView(Map.empty, config.clusterContext, Option(BrokerMetrics.DEFAULT))
 
-  private[this] var brokerMessagesPerSecCountHistory : Map[Int, Queue[BrokerMessagesPerSecCount]] = Map.empty
+  private[this] var brokerMessagesPerSecCountHistory: Map[Int, Queue[BrokerMessagesPerSecCount]] = Map.empty
 
   override def preStart() = {
     log.info("Started actor %s".format(self.path))
@@ -74,7 +77,7 @@ class BrokerViewCacheActor(config: BrokerViewCacheActorConfig) extends LongRunni
       context.system.scheduler.schedule(0 seconds,
         config.updatePeriod,
         self,
-        BVForceUpdate)(context.system.dispatcher,self)
+        BVForceUpdate)(context.system.dispatcher, self)
     )
   }
 
@@ -92,24 +95,24 @@ class BrokerViewCacheActor(config: BrokerViewCacheActorConfig) extends LongRunni
     log.error("Long running pool queue full, skipping!")
   }
 
-  private def produceBViewWithBrokerClusterState(bv: BVView, id: Int) : BVView = {
+  private def produceBViewWithBrokerClusterState(bv: BVView, id: Int): BVView = {
     val bcs = for {
       metrics <- bv.metrics
       cbm <- combinedBrokerMetric
     } yield {
-        val perMessages = if(cbm.messagesInPerSec.oneMinuteRate > 0) {
-          BigDecimal(metrics.messagesInPerSec.oneMinuteRate / cbm.messagesInPerSec.oneMinuteRate * 100D).setScale(3, BigDecimal.RoundingMode.HALF_UP)
-        } else ZERO
-        val perIncoming = if(cbm.bytesInPerSec.oneMinuteRate > 0) {
-          BigDecimal(metrics.bytesInPerSec.oneMinuteRate / cbm.bytesInPerSec.oneMinuteRate * 100D).setScale(3, BigDecimal.RoundingMode.HALF_UP)
-        } else ZERO
-        val perOutgoing = if(cbm.bytesOutPerSec.oneMinuteRate > 0) {
-          BigDecimal(metrics.bytesOutPerSec.oneMinuteRate / cbm.bytesOutPerSec.oneMinuteRate * 100D).setScale(3, BigDecimal.RoundingMode.HALF_UP)
-        } else ZERO
-        BrokerClusterStats(perMessages, perIncoming, perOutgoing)
-      }
+      val perMessages = if (cbm.messagesInPerSec.oneMinuteRate > 0) {
+        BigDecimal(metrics.messagesInPerSec.oneMinuteRate / cbm.messagesInPerSec.oneMinuteRate * 100D).setScale(3, BigDecimal.RoundingMode.HALF_UP)
+      } else ZERO
+      val perIncoming = if (cbm.bytesInPerSec.oneMinuteRate > 0) {
+        BigDecimal(metrics.bytesInPerSec.oneMinuteRate / cbm.bytesInPerSec.oneMinuteRate * 100D).setScale(3, BigDecimal.RoundingMode.HALF_UP)
+      } else ZERO
+      val perOutgoing = if (cbm.bytesOutPerSec.oneMinuteRate > 0) {
+        BigDecimal(metrics.bytesOutPerSec.oneMinuteRate / cbm.bytesOutPerSec.oneMinuteRate * 100D).setScale(3, BigDecimal.RoundingMode.HALF_UP)
+      } else ZERO
+      BrokerClusterStats(perMessages, perIncoming, perOutgoing)
+    }
     val messagesPerSecCountHistory = brokerMessagesPerSecCountHistory.get(id)
-    if(bcs.isDefined) {
+    if (bcs.isDefined) {
       bv.copy(stats = bcs, messagesPerSecCountHistory = messagesPerSecCountHistory)
     } else {
       bv.copy(messagesPerSecCountHistory = messagesPerSecCountHistory)
@@ -152,7 +155,7 @@ class BrokerViewCacheActor(config: BrokerViewCacheActorConfig) extends LongRunni
         sender ! brokerMetrics
 
       case BVGetTopicMetrics(topic) =>
-        sender ! topicMetrics.get(topic).map(m => m.values.foldLeft(BrokerMetrics.DEFAULT)((acc,bm) => acc + bm))
+        sender ! topicMetrics.get(topic).map(m => m.values.foldLeft(BrokerMetrics.DEFAULT)((acc, bm) => acc + bm))
 
       case BVGetTopicIdentities =>
         sender ! topicIdentities
@@ -164,7 +167,10 @@ class BrokerViewCacheActor(config: BrokerViewCacheActorConfig) extends LongRunni
         sender ! consumerIdentities
 
       case BVGetBrokerTopicPartitionSizes(topic) =>
-        sender ! brokerTopicPartitionSizes.get(topic).map(m => m.map{case (k,v) => (k, v.toMap)}.toMap)
+        val r = brokerTopicPartitionSizes.get(topic).map(m => m.map { case (k, v) => (k, v.toMap) }.toMap)
+        log.info(s"BVGetBrokerTopicPartitionSizes($topic) = $r ")
+
+        sender ! r
 
       case BVUpdateTopicMetricsForBroker(id, metrics) =>
         metrics.foreach {
@@ -203,7 +209,7 @@ class BrokerViewCacheActor(config: BrokerViewCacheActorConfig) extends LongRunni
         // update broker metrics and view to reflect topics sizes it has
         val metrics = brokerMetrics.get(id)
         metrics foreach { case bm =>
-          val brokerSize = logInfo.map{case (t, p) => p.values.map(_.bytes).sum}.sum
+          val brokerSize = logInfo.map { case (t, p) => p.values.map(_.bytes).sum }.sum
           val newBm = BrokerMetrics(
             bm.bytesInPerSec,
             bm.bytesOutPerSec,
@@ -248,39 +254,39 @@ class BrokerViewCacheActor(config: BrokerViewCacheActorConfig) extends LongRunni
       topicDescriptions <- topicDescriptionsOption
       previousDescriptionsMap: Option[Map[String, TopicDescription]] = previousTopicDescriptionsOption.map(_.descriptions.map(td => (td.topic, td)).toMap)
     } {
-      val topicIdentity : IndexedSeq[TopicIdentity] = topicDescriptions.descriptions.map {
+      val topicIdentity: IndexedSeq[TopicIdentity] = topicDescriptions.descriptions.map {
         tdCurrent =>
-          val tpm = brokerTopicPartitionSizes.get(tdCurrent.topic).map(m => m.map{case (k,v) => (k, v.toMap)}.toMap)
+          val tpm = brokerTopicPartitionSizes.get(tdCurrent.topic).map(m => m.map { case (k, v) => (k, v.toMap) }.toMap)
           TopicIdentity.from(brokerList.list.size, tdCurrent, None, tpm, config.clusterContext, previousDescriptionsMap.flatMap(_.get(tdCurrent.topic)))
-        
+
       }
       topicIdentities = topicIdentity.map(ti => (ti.topic, ti)).toMap
       val topicPartitionByBroker = topicIdentity.flatMap(
-        ti => ti.partitionsByBroker.map(btp => (ti,btp.id,btp.partitions,btp.leaders))).groupBy(_._2)
+        ti => ti.partitionsByBroker.map(btp => (ti, btp.id, btp.partitions, btp.leaders))).groupBy(_._2)
 
       featureGate(KMJMXMetricsFeature) {
         implicit val ec = longRunningExecutionContext
         featureGateFold[Unit](KMDisplaySizeFeature)(
-        {
-          //check for 2*broker list size since we schedule 2 jmx calls for each broker
-          if (hasCapacityFor(2*brokerList.list.size)) {
-            updateTopicMetrics(brokerList, topicPartitionByBroker)
-            updateBrokerMetrics(brokerList)
-          } else {
-            log.warning("Not scheduling update of JMX for all brokers, not enough capacity!")
+          {
+            //check for 2*broker list size since we schedule 2 jmx calls for each broker
+            if (hasCapacityFor(2 * brokerList.list.size)) {
+              updateTopicMetrics(brokerList, topicPartitionByBroker)
+              updateBrokerMetrics(brokerList)
+            } else {
+              log.warning("Not scheduling update of JMX for all brokers, not enough capacity!")
+            }
           }
-        }
-        ,
-        {
-          //check for 3*broker list size since we schedule 3 jmx calls for each broker
-          if (hasCapacityFor(3*brokerList.list.size)) {
-            updateTopicMetrics(brokerList, topicPartitionByBroker)
-            updateBrokerMetrics(brokerList)
-            updateBrokerTopicPartitionsSize(brokerList)
-          } else {
-            log.warning("Not scheduling update of JMX for all brokers, not enough capacity!")
-          }
-        })
+          ,
+          {
+            //check for 3*broker list size since we schedule 3 jmx calls for each broker
+            if (hasCapacityFor(3 * brokerList.list.size)) {
+              updateTopicMetrics(brokerList, topicPartitionByBroker)
+              updateBrokerMetrics(brokerList)
+              updateBrokerTopicPartitionsSize(brokerList)
+            } else {
+              log.warning("Not scheduling update of JMX for all brokers, not enough capacity!")
+            }
+          })
 
       }
 
@@ -296,23 +302,29 @@ class BrokerViewCacheActor(config: BrokerViewCacheActorConfig) extends LongRunni
     }
   }
 
+  /**
+    * 跟新 消费者信息
+    */
   private[this] def updateViewsForConsumers(): Unit = {
-    for {
-      consumerDescriptions <- consumerDescriptionsOption
-    } {
-      val consumerIdentity : IndexedSeq[ConsumerIdentity] = consumerDescriptions.descriptions.map(
-          ConsumerIdentity.from(_, config.clusterContext))
+    for (consumerDescriptions <- consumerDescriptionsOption) {
+      val consumerIdentity: IndexedSeq[ConsumerIdentity] = consumerDescriptions.descriptions.map(ConsumerIdentity.from(_, config.clusterContext))
+
       consumerIdentities = consumerIdentity.map(ci => ((ci.consumerGroup, ci.consumerType), ci)).toMap
 
-      val c2tMap = consumerDescriptions.descriptions.map{cd: ConsumerDescription =>
-        ((cd.consumer, cd.consumerType), cd.topics.keys.toList)}.toMap
-      topicConsumerMap = c2tMap.values.flatten.map(v => (v, c2tMap.keys.filter(c2tMap(_).contains(v)))).toMap
+      val c2tMap = consumerDescriptions.descriptions.map { cd: ConsumerDescription =>
+        ((cd.consumer, cd.consumerType), cd.topics.keys.toList)
+      }.toMap
+
+
+      topicConsumerMap = c2tMap.values.flatten.map(v => (v, c2tMap.keys.filter(c2tMap(_).contains(v)))).toMap ++ Map("monitor_sqkb_basic_app" -> Iterable("aaa" -> HbaseManagedConsumer))
+      println(topicConsumerMap)
     }
+
   }
 
   private def updateTopicMetrics(brokerList: BrokerList,
-    topicPartitionByBroker: Map[Int, IndexedSeq[(TopicIdentity, Int, IndexedSeq[Int], IndexedSeq[Int])]]
-    )(implicit ec: ExecutionContext): Unit = {
+                                 topicPartitionByBroker: Map[Int, IndexedSeq[(TopicIdentity, Int, IndexedSeq[Int], IndexedSeq[Int])]]
+                                )(implicit ec: ExecutionContext): Unit = {
     val brokerLookup = brokerList.list.map(bi => bi.id -> bi).toMap
     topicPartitionByBroker.foreach {
       case (brokerId, topicPartitions) =>
