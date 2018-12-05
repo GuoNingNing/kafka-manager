@@ -42,10 +42,16 @@ object HbaseOffsetsManager extends Logging {
 
 
   @transient
-  private lazy val table: Table = {
-    val t = HbaseConnPool.connect(storeParams).getTable(TableName.valueOf(tableName))
-    logger.info(s"get hbase table $tableName $t")
-    t
+  private lazy val tableOpt: Option[Table] = {
+    val conn = HbaseConnPool.connect(storeParams)
+    if (!conn.getAdmin.tableExists(TableName.valueOf(tableName))) {
+      logger.warn("this table is not exists ,Please build table first.")
+      None
+    } else {
+      val t = conn.getTable(TableName.valueOf(tableName))
+      logger.info(s"get hbase table $tableName $t")
+      Some(t)
+    }
   }
 
 
@@ -81,10 +87,12 @@ object HbaseOffsetsManager extends Logging {
     val filter = new KeyOnlyFilter()
     val scan = new Scan().setFilter(filter)
 
-    val rs = table.getScanner(scan)
-    val r = rs.asScala.map(r => Bytes.toString(r.getRow).split("#").head).toSet
-    rs.close()
-    r
+    tableOpt.map(t => {
+      val rs = t.getScanner(scan)
+      val r = rs.asScala.map(r => Bytes.toString(r.getRow).split("#").head).toSet
+      rs.close()
+      r
+    }).getOrElse(Set.empty)
   }
 
   /**
@@ -94,6 +102,7 @@ object HbaseOffsetsManager extends Logging {
     * @return
     */
   def getTopics(consumer: String): Set[String] = {
+    logger.info(s"getTopics for consumer [$consumer]")
 
     val filterAnd = new FilterList(FilterList.Operator.MUST_PASS_ALL)
 
@@ -105,10 +114,12 @@ object HbaseOffsetsManager extends Logging {
 
     val scan = new Scan().setFilter(filterAnd)
 
-    val rs = table.getScanner(scan)
-    val r = rs.asScala.map(r => Bytes.toString(r.getRow)).filter(_.startsWith(consumer)).map(_.split("#")(1)).toSet
-    rs.close()
-    r
+    tableOpt.map(t => {
+      val rs = t.getScanner(scan)
+      val r = rs.asScala.map(r => Bytes.toString(r.getRow)).filter(_.startsWith(consumer)).map(_.split("#")(1)).toSet
+      rs.close()
+      r
+    }).getOrElse(Set.empty)
   }
 
 
@@ -174,32 +185,34 @@ object HbaseOffsetsManager extends Logging {
   def getOffsets(groupId: String, topics: Set[String]): Map[TopicPartition, Long] = {
     val storedOffsetMap = new mutable.HashMap[TopicPartition, Long]()
 
-    for (topic <- topics) {
-      val key = generateKey(groupId, topic)
-      val filter = new PrefixFilter(key.getBytes)
-      val scan = new Scan().setFilter(filter)
-      val rs = table.getScanner(scan)
-      rs.asScala.map(r => {
-        val cells = r.rawCells()
+    tableOpt.foreach { table =>
+      for (topic <- topics) {
+        val key = generateKey(groupId, topic)
+        val filter = new PrefixFilter(key.getBytes)
+        val scan = new Scan().setFilter(filter)
+        val rs = table.getScanner(scan)
+        rs.asScala.map(r => {
+          val cells = r.rawCells()
 
-        var topic = ""
-        var partition = 0
-        var offset = 0L
+          var topic = ""
+          var partition = 0
+          var offset = 0L
 
-        cells.foreach(cell => {
-          Bytes.toString(CellUtil.cloneQualifier(cell)) match {
-            case "topic" => topic = Bytes.toString(CellUtil.cloneValue(cell))
-            case "partition" => partition = Bytes.toInt(CellUtil.cloneValue(cell))
-            case "offset" => offset = Bytes.toLong(CellUtil.cloneValue(cell))
-            case other =>
-          }
+          cells.foreach(cell => {
+            Bytes.toString(CellUtil.cloneQualifier(cell)) match {
+              case "topic" => topic = Bytes.toString(CellUtil.cloneValue(cell))
+              case "partition" => partition = Bytes.toInt(CellUtil.cloneValue(cell))
+              case "offset" => offset = Bytes.toLong(CellUtil.cloneValue(cell))
+              case other =>
+            }
+          })
+
+          val tp = new TopicPartition(topic, partition)
+
+          storedOffsetMap += tp -> offset
         })
-
-        val tp = new TopicPartition(topic, partition)
-
-        storedOffsetMap += tp -> offset
-      })
-      rs.close()
+        rs.close()
+      }
     }
     storedOffsetMap.toMap
   }
@@ -211,17 +224,20 @@ object HbaseOffsetsManager extends Logging {
     * @param offsetInfos
     */
   def updateOffsets(groupId: String, offsetInfos: Map[TopicPartition, Long]): Unit = {
-    val puts = offsetInfos.map {
-      case (tp, offset) =>
-        val put: Put = new Put(Bytes.toBytes(s"${generateKey(groupId, tp.topic)}#${tp.partition}"))
-        put.addColumn(familyNameBytes, topicBytes, Bytes.toBytes(tp.topic))
-        put.addColumn(familyNameBytes, partitionBytes, Bytes.toBytes(tp.partition))
-        put.addColumn(familyNameBytes, offsetBytes, Bytes.toBytes(offset))
-        put
-    } toList
+    tableOpt.foreach { table =>
+      val puts = offsetInfos.map {
+        case (tp, offset) =>
+          val put: Put = new Put(Bytes.toBytes(s"${generateKey(groupId, tp.topic)}#${tp.partition}"))
+          put.addColumn(familyNameBytes, topicBytes, Bytes.toBytes(tp.topic))
+          put.addColumn(familyNameBytes, partitionBytes, Bytes.toBytes(tp.partition))
+          put.addColumn(familyNameBytes, offsetBytes, Bytes.toBytes(offset))
+          put
+      } toList
 
-    table.put(puts.asJava)
-    logger.info(s"updateOffsets [ $groupId,${offsetInfos.mkString(",")} ]")
+      table.put(puts.asJava)
+      logger.info(s"updateOffsets [ $groupId,${offsetInfos.mkString(",")} ]")
+    }
+
   }
 
   /**
@@ -232,29 +248,31 @@ object HbaseOffsetsManager extends Logging {
     */
   def delOffsets(groupId: String, topics: Set[String]): Unit = {
 
-    val filterList = new FilterList(FilterList.Operator.MUST_PASS_ONE)
+    tableOpt.foreach { table =>
+      val filterList = new FilterList(FilterList.Operator.MUST_PASS_ONE)
 
-    for (topic <- topics) {
-      val filter = new RowFilter(CompareFilter.CompareOp.EQUAL, new BinaryPrefixComparator(Bytes.toBytes(s"${generateKey(groupId, topic)}#")))
-      filterList.addFilter(filter)
+      for (topic <- topics) {
+        val filter = new RowFilter(CompareFilter.CompareOp.EQUAL, new BinaryPrefixComparator(Bytes.toBytes(s"${generateKey(groupId, topic)}#")))
+        filterList.addFilter(filter)
+      }
+
+      val scan = new Scan()
+      scan.setFilter(filterList)
+
+      val rs = table.getScanner(scan)
+      val iter = rs.iterator()
+
+      import java.util
+
+      val deletes = new util.ArrayList[Delete]()
+      while (iter.hasNext) {
+        val r = iter.next()
+        deletes.add(new Delete(Bytes.toBytes(new String(r.getRow))))
+      }
+      rs.close()
+      table.delete(deletes)
+      logger.info(s"deleteOffsets [ $groupId,${topics.mkString(",")} ] ${deletes.asScala.mkString(" ")}")
     }
-
-    val scan = new Scan()
-    scan.setFilter(filterList)
-
-    val rs = table.getScanner(scan)
-    val iter = rs.iterator()
-
-    import java.util
-
-    val deletes = new util.ArrayList[Delete]()
-    while (iter.hasNext) {
-      val r = iter.next()
-      deletes.add(new Delete(Bytes.toBytes(new String(r.getRow))))
-    }
-    rs.close()
-    table.delete(deletes)
-    logger.info(s"deleteOffsets [ $groupId,${topics.mkString(",")} ] ${deletes.asScala.mkString(" ")}")
   }
 
 

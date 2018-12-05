@@ -303,7 +303,7 @@ class BrokerViewCacheActor(config: BrokerViewCacheActorConfig) extends LongRunni
   }
 
   /**
-    * 跟新 消费者信息
+    * 更新 消费者信息
     */
   private[this] def updateViewsForConsumers(): Unit = {
     for (consumerDescriptions <- consumerDescriptionsOption) {
@@ -315,9 +315,8 @@ class BrokerViewCacheActor(config: BrokerViewCacheActorConfig) extends LongRunni
         ((cd.consumer, cd.consumerType), cd.topics.keys.toList)
       }.toMap
 
-
-      topicConsumerMap = c2tMap.values.flatten.map(v => (v, c2tMap.keys.filter(c2tMap(_).contains(v)))).toMap ++ Map("monitor_sqkb_basic_app" -> Iterable("aaa" -> HbaseManagedConsumer))
-      println(topicConsumerMap)
+      topicConsumerMap = c2tMap.values.flatten.map(v => (v, c2tMap.keys.filter(c2tMap(_).contains(v)))).toMap
+      log.info(s"updateViewsForConsumers $topicConsumerMap")
     }
 
   }

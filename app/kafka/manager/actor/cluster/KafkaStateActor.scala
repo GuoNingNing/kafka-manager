@@ -660,7 +660,7 @@ trait OffsetCache extends Logging {
 
   protected def getHbaseManagedConsumerTopics(consumer: String): Set[String] = {
     val topics = HbaseOffsetsManager.getTopics(consumer)
-    println(s"getHbaseManagedConsumerTopics  $consumer [$topics]")
+    logger.info(s"getHbaseManagedConsumerTopics  $consumer [$topics]")
     topics
   }
 
@@ -1300,39 +1300,39 @@ class KafkaStateActor(config: KafkaStateActorConfig) extends BaseClusterQueryCom
   override def processQueryRequest(request: QueryRequest): Unit = {
     request match {
 
-//      case KSGetOffsetForTime(broker, topic, time) =>
-//
-//
-//        val props: Properties = new Properties()
-//        props.put(GROUP_ID_CONFIG, s"KSGetOffsetForTime")
-//        props.put(BOOTSTRAP_SERVERS_CONFIG, broker)
-//        props.put(EXCLUDE_INTERNAL_TOPICS_CONFIG, "false")
-//        props.put(ENABLE_AUTO_COMMIT_CONFIG, "false")
-//        props.put(KEY_DESERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.ByteArrayDeserializer")
-//        props.put(VALUE_DESERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.ByteArrayDeserializer")
-//        props.put(AUTO_OFFSET_RESET_CONFIG, "latest")
-//
-//
-//        val kafkaConsumer = new KafkaConsumer(props)
-//
-//        kafkaConsumer.subscribe(Set(topic))
-//
-//
-//        var optPartitionsWithLeaders: Option[List[(Int, Option[BrokerIdentity])]] = getPartitionLeaders(topic)
-//
-//        optPartitionsWithLeaders match {
-//          case Some(leaders) =>
-//            val timestampsToSearch = leaders.map(x => new TopicPartition(topic, x._1) -> java.lang.Long.valueOf(time)).toMap
-//
-//            val offset = kafkaConsumer.offsetsForTimes(timestampsToSearch.asJava)
-//
-//            println("------------------------------------------------------------")
-//            println(offset)
-////            sender() ! offset
-//
-//          case _ =>
-//        }
-//
+      //      case KSGetOffsetForTime(broker, topic, time) =>
+      //
+      //
+      //        val props: Properties = new Properties()
+      //        props.put(GROUP_ID_CONFIG, s"KSGetOffsetForTime")
+      //        props.put(BOOTSTRAP_SERVERS_CONFIG, broker)
+      //        props.put(EXCLUDE_INTERNAL_TOPICS_CONFIG, "false")
+      //        props.put(ENABLE_AUTO_COMMIT_CONFIG, "false")
+      //        props.put(KEY_DESERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.ByteArrayDeserializer")
+      //        props.put(VALUE_DESERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.ByteArrayDeserializer")
+      //        props.put(AUTO_OFFSET_RESET_CONFIG, "latest")
+      //
+      //
+      //        val kafkaConsumer = new KafkaConsumer(props)
+      //
+      //        kafkaConsumer.subscribe(Set(topic))
+      //
+      //
+      //        var optPartitionsWithLeaders: Option[List[(Int, Option[BrokerIdentity])]] = getPartitionLeaders(topic)
+      //
+      //        optPartitionsWithLeaders match {
+      //          case Some(leaders) =>
+      //            val timestampsToSearch = leaders.map(x => new TopicPartition(topic, x._1) -> java.lang.Long.valueOf(time)).toMap
+      //
+      //            val offset = kafkaConsumer.offsetsForTimes(timestampsToSearch.asJava)
+      //
+      //            println("------------------------------------------------------------")
+      //            println(offset)
+      ////            sender() ! offset
+      //
+      //          case _ =>
+      //        }
+      //
 
       case KSGetTopics =>
         val deleteSet: Set[String] =
