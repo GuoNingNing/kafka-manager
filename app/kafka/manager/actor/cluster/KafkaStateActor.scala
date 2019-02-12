@@ -9,7 +9,7 @@ import java.io.Closeable
 import java.net.InetAddress
 import java.nio.ByteBuffer
 import java.util.Properties
-import java.util.concurrent.{ConcurrentLinkedDeque, TimeUnit}
+import java.util.concurrent.{ConcurrentHashMap, ConcurrentLinkedDeque, TimeUnit}
 
 import akka.actor.{ActorContext, ActorPath, ActorRef, Props}
 import akka.pattern._
@@ -49,6 +49,9 @@ import org.apache.kafka.clients.consumer.internals.ConsumerProtocol
 import org.apache.kafka.common.config.SaslConfigs
 import org.apache.kafka.common.protocol.Errors
 import org.apache.kafka.clients.CommonClientConfigs.SECURITY_PROTOCOL_CONFIG
+import org.apache.kafka.common.serialization.StringDeserializer
+
+import scala.collection.mutable.ArrayBuffer
 
 /**
   * @author hiral
@@ -1041,6 +1044,7 @@ class KafkaStateActor(config: KafkaStateActorConfig) extends BaseClusterQueryCom
   @volatile
   private[this] var topicsTreeCacheLastUpdateMillis: Long = System.currentTimeMillis()
 
+
   private[this] val topicsTreeCacheListener = new TreeCacheListener {
     override def childEvent(client: CuratorFramework, event: TreeCacheEvent): Unit = {
       event.getType match {
@@ -1297,6 +1301,8 @@ class KafkaStateActor(config: KafkaStateActorConfig) extends BaseClusterQueryCom
     result pipeTo sender
   }
 
+  private val consumerCache: ConcurrentHashMap[String, KafkaConsumer[String, String]] = new ConcurrentHashMap[String, KafkaConsumer[String, String]]()
+
   override def processQueryRequest(request: QueryRequest): Unit = {
     request match {
 
@@ -1333,6 +1339,40 @@ class KafkaStateActor(config: KafkaStateActorConfig) extends BaseClusterQueryCom
       //          case _ =>
       //        }
       //
+
+      //读取kafka中的数据
+      case KSReadTopic(topic: String) =>
+
+        val _sender = sender()
+
+        implicit val ec = context.dispatcher
+        log.info(s"read topic $topic")
+
+        val kafkaConsumer = consumerCache.getOrElseUpdate(s"${config.clusterContext.config.name}#$topic", {
+          val props: Properties = new Properties()
+          props.put(GROUP_ID_CONFIG, s"KSReadTopic")
+          props.put(BOOTSTRAP_SERVERS_CONFIG, config.clusterContext.config.curatorConfig.zkConnect.replace("2181", "9092"))
+          props.put(EXCLUDE_INTERNAL_TOPICS_CONFIG, "false")
+          props.put(ENABLE_AUTO_COMMIT_CONFIG, "false")
+          props.put(KEY_DESERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.StringDeserializer")
+          props.put(VALUE_DESERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.StringDeserializer")
+          props.put(AUTO_OFFSET_RESET_CONFIG, "latest")
+
+          new KafkaConsumer(props)
+        })
+
+        kafkaConsumer.subscribe(Set(topic))
+
+        var i = 0
+        var count = 0
+        val logs = new ArrayBuffer[String]()
+        while (i < 10 && logs.size < 10) {
+          kafkaConsumer.poll(100).asScala.foreach(x => {
+            println(x.value())
+            logs.add(x.value())
+          })
+        }
+        _sender ! logs.take(10).toList
 
       case KSGetTopics =>
         val deleteSet: Set[String] =
@@ -1628,5 +1668,31 @@ class KafkaStateActor(config: KafkaStateActorConfig) extends BaseClusterQueryCom
     }
   }
 
+}
+
+object T {
+  def main(args: Array[String]): Unit = {
+    val props: Properties = new Properties()
+    props.put(GROUP_ID_CONFIG, s"KSReadTopic")
+    props.put(BOOTSTRAP_SERVERS_CONFIG, "bigdata-kafka-001-113-8:2181")
+    props.put(EXCLUDE_INTERNAL_TOPICS_CONFIG, "false")
+    props.put(ENABLE_AUTO_COMMIT_CONFIG, "false")
+    props.put(KEY_DESERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.StringDeserializer")
+    props.put(VALUE_DESERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.StringDeserializer")
+    props.put(AUTO_OFFSET_RESET_CONFIG, "latest")
+    val kafkaConsumer = new KafkaConsumer(props)
+    kafkaConsumer.subscribe(Set("flm_monitor_sqkb_app_v2"))
+
+
+    while (true) {
+      val records = kafkaConsumer.poll(100).asScala
+
+      for (elem <- records) {
+        println(s"${elem.key()} \t ${elem.value()}")
+      }
+
+    }
+
+  }
 }
 

@@ -229,6 +229,8 @@ object ActorModel {
 
   case class KSGetTopicConfig(topic: String) extends KSRequest
 
+  case class KSReadTopic(topic: String) extends KSRequest
+
   case class KSGetTopicDescription(topic: String) extends KSRequest
 
   case class KSGetAllTopicDescriptions(lastUpdateMillis: Option[Long] = None) extends KSRequest

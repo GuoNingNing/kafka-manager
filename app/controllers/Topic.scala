@@ -1,7 +1,7 @@
 /**
- * Copyright 2015 Yahoo Inc. Licensed under the Apache License, Version 2.0
- * See accompanying LICENSE file.
- */
+  * Copyright 2015 Yahoo Inc. Licensed under the Apache License, Version 2.0
+  * See accompanying LICENSE file.
+  */
 
 package controllers
 
@@ -29,15 +29,16 @@ import scala.util.{Failure, Success, Try}
 import scalaz.-\/
 
 /**
- * @author hiral
- */
-class Topic (val messagesApi: MessagesApi, val kafkaManagerContext: KafkaManagerContext)
-            (implicit af: ApplicationFeatures, menus: Menus) extends Controller with I18nSupport {
+  * @author hiral
+  */
+class Topic(val messagesApi: MessagesApi, val kafkaManagerContext: KafkaManagerContext)
+           (implicit af: ApplicationFeatures, menus: Menus) extends Controller with I18nSupport {
+
   import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
   private[this] val kafkaManager = kafkaManagerContext.getKafkaManager
 
-  val validateName : Constraint[String] = Constraint("validate name") { name =>
+  val validateName: Constraint[String] = Constraint("validate name") { name =>
     Try {
       kafka.manager.utils.Topic.validate(name)
     } match {
@@ -46,23 +47,23 @@ class Topic (val messagesApi: MessagesApi, val kafkaManagerContext: KafkaManager
     }
   }
 
-  val kafka_0_8_1_1_Default = CreateTopic("",1,1,TopicConfigs.configNames(Kafka_0_8_1_1).map(n => TConfig(n,None)).toList)
-  val kafka_0_8_2_0_Default = CreateTopic("",1,1,TopicConfigs.configNames(Kafka_0_8_2_0).map(n => TConfig(n,None)).toList)
-  val kafka_0_8_2_1_Default = CreateTopic("",1,1,TopicConfigs.configNames(Kafka_0_8_2_1).map(n => TConfig(n,None)).toList)
-  val kafka_0_8_2_2_Default = CreateTopic("",1,1,TopicConfigs.configNames(Kafka_0_8_2_2).map(n => TConfig(n,None)).toList)
-  val kafka_0_9_0_0_Default = CreateTopic("",1,1,TopicConfigs.configNames(Kafka_0_9_0_0).map(n => TConfig(n,None)).toList)
-  val kafka_0_9_0_1_Default = CreateTopic("",1,1,TopicConfigs.configNames(Kafka_0_9_0_1).map(n => TConfig(n,None)).toList)
-  val kafka_0_10_0_0_Default = CreateTopic("",1,1,TopicConfigs.configNames(Kafka_0_10_0_0).map(n => TConfig(n,None)).toList)
-  val kafka_0_10_0_1_Default = CreateTopic("",1,1,TopicConfigs.configNames(Kafka_0_10_0_1).map(n => TConfig(n,None)).toList)
-  val kafka_0_10_1_0_Default = CreateTopic("",1,1,TopicConfigs.configNames(Kafka_0_10_1_0).map(n => TConfig(n,None)).toList)
-  val kafka_0_10_1_1_Default = CreateTopic("",1,1,TopicConfigs.configNames(Kafka_0_10_1_1).map(n => TConfig(n,None)).toList)
-  val kafka_0_10_2_0_Default = CreateTopic("",1,1,TopicConfigs.configNames(Kafka_0_10_2_0).map(n => TConfig(n,None)).toList)
-  val kafka_0_10_2_1_Default = CreateTopic("",1,1,TopicConfigs.configNames(Kafka_0_10_2_1).map(n => TConfig(n,None)).toList)
-  val kafka_0_11_0_0_Default = CreateTopic("",1,1,TopicConfigs.configNames(Kafka_0_11_0_0).map(n => TConfig(n,None)).toList)
-  val kafka_0_11_0_2_Default = CreateTopic("",1,1,TopicConfigs.configNames(Kafka_0_11_0_2).map(n => TConfig(n,None)).toList)
-  val kafka_1_0_0_Default = CreateTopic("",1,1,TopicConfigs.configNames(Kafka_1_0_0).map(n => TConfig(n,None)).toList)
-  val kafka_1_0_1_Default = CreateTopic("",1,1,TopicConfigs.configNames(Kafka_1_0_1).map(n => TConfig(n,None)).toList)
-  val kafka_1_1_0_Default = CreateTopic("",1,1,TopicConfigs.configNames(Kafka_1_1_0).map(n => TConfig(n,None)).toList)
+  val kafka_0_8_1_1_Default = CreateTopic("", 1, 1, TopicConfigs.configNames(Kafka_0_8_1_1).map(n => TConfig(n, None)).toList)
+  val kafka_0_8_2_0_Default = CreateTopic("", 1, 1, TopicConfigs.configNames(Kafka_0_8_2_0).map(n => TConfig(n, None)).toList)
+  val kafka_0_8_2_1_Default = CreateTopic("", 1, 1, TopicConfigs.configNames(Kafka_0_8_2_1).map(n => TConfig(n, None)).toList)
+  val kafka_0_8_2_2_Default = CreateTopic("", 1, 1, TopicConfigs.configNames(Kafka_0_8_2_2).map(n => TConfig(n, None)).toList)
+  val kafka_0_9_0_0_Default = CreateTopic("", 1, 1, TopicConfigs.configNames(Kafka_0_9_0_0).map(n => TConfig(n, None)).toList)
+  val kafka_0_9_0_1_Default = CreateTopic("", 1, 1, TopicConfigs.configNames(Kafka_0_9_0_1).map(n => TConfig(n, None)).toList)
+  val kafka_0_10_0_0_Default = CreateTopic("", 1, 1, TopicConfigs.configNames(Kafka_0_10_0_0).map(n => TConfig(n, None)).toList)
+  val kafka_0_10_0_1_Default = CreateTopic("", 1, 1, TopicConfigs.configNames(Kafka_0_10_0_1).map(n => TConfig(n, None)).toList)
+  val kafka_0_10_1_0_Default = CreateTopic("", 1, 1, TopicConfigs.configNames(Kafka_0_10_1_0).map(n => TConfig(n, None)).toList)
+  val kafka_0_10_1_1_Default = CreateTopic("", 1, 1, TopicConfigs.configNames(Kafka_0_10_1_1).map(n => TConfig(n, None)).toList)
+  val kafka_0_10_2_0_Default = CreateTopic("", 1, 1, TopicConfigs.configNames(Kafka_0_10_2_0).map(n => TConfig(n, None)).toList)
+  val kafka_0_10_2_1_Default = CreateTopic("", 1, 1, TopicConfigs.configNames(Kafka_0_10_2_1).map(n => TConfig(n, None)).toList)
+  val kafka_0_11_0_0_Default = CreateTopic("", 1, 1, TopicConfigs.configNames(Kafka_0_11_0_0).map(n => TConfig(n, None)).toList)
+  val kafka_0_11_0_2_Default = CreateTopic("", 1, 1, TopicConfigs.configNames(Kafka_0_11_0_2).map(n => TConfig(n, None)).toList)
+  val kafka_1_0_0_Default = CreateTopic("", 1, 1, TopicConfigs.configNames(Kafka_1_0_0).map(n => TConfig(n, None)).toList)
+  val kafka_1_0_1_Default = CreateTopic("", 1, 1, TopicConfigs.configNames(Kafka_1_0_1).map(n => TConfig(n, None)).toList)
+  val kafka_1_1_0_Default = CreateTopic("", 1, 1, TopicConfigs.configNames(Kafka_1_1_0).map(n => TConfig(n, None)).toList)
 
   val defaultCreateForm = Form(
     mapping(
@@ -165,22 +166,30 @@ class Topic (val messagesApi: MessagesApi, val kafkaManagerContext: KafkaManager
 
   def topics(c: String) = Action.async {
     kafkaManager.getTopicListExtended(c).map { errorOrTopicList =>
-      Ok(views.html.topic.topicList(c,errorOrTopicList))
+      Ok(views.html.topic.topicList(c, errorOrTopicList))
     }
   }
 
   def topic(c: String, t: String, force: Boolean) = Action.async {
-    val futureErrorOrTopicIdentity = kafkaManager.getTopicIdentity(c,t)
-    val futureErrorOrConsumerList = kafkaManager.getConsumersForTopic(c,t)
+    val futureErrorOrTopicIdentity = kafkaManager.getTopicIdentity(c, t)
+    val futureErrorOrConsumerList = kafkaManager.getConsumersForTopic(c, t)
 
-    futureErrorOrTopicIdentity.zip(futureErrorOrConsumerList).map {case (errorOrTopicIdentity,errorOrConsumerList) =>
+    futureErrorOrTopicIdentity.zip(futureErrorOrConsumerList).map { case (errorOrTopicIdentity, errorOrConsumerList) =>
       val op = force match {
         case true => ForceRunAssignment
         case _ => RunAssignment
       }
-      Ok(views.html.topic.topicView(c,t,errorOrTopicIdentity,errorOrConsumerList, op))
+      Ok(views.html.topic.topicView(c, t, errorOrTopicIdentity, errorOrConsumerList, op))
     }
   }
+
+  def read(c: String, t: String) = Action.async {
+
+    val futureReadTopic = kafkaManager.readTopic(c, t)
+
+    futureReadTopic.map(list => Ok(list.mkString("[",",","]")))
+  }
+
 
   def createTopic(clusterName: String) = Action.async { implicit request =>
     featureGate(KMTopicManagerFeature) {
@@ -232,8 +241,8 @@ class Topic (val messagesApi: MessagesApi, val kafkaManagerContext: KafkaManager
     val futureErrorOrTopicIdentity = kafkaManager.getTopicIdentity(clusterName, topic)
     val futureErrorOrConsumerList = kafkaManager.getConsumersForTopic(clusterName, topic)
 
-    futureErrorOrTopicIdentity.zip(futureErrorOrConsumerList).map {case (errorOrTopicIdentity,errorOrConsumerList) =>
-      Ok(views.html.topic.topicDeleteConfirm(clusterName,topic,errorOrTopicIdentity,errorOrConsumerList))
+    futureErrorOrTopicIdentity.zip(futureErrorOrConsumerList).map { case (errorOrTopicIdentity, errorOrConsumerList) =>
+      Ok(views.html.topic.topicDeleteConfirm(clusterName, topic, errorOrTopicIdentity, errorOrConsumerList))
     }
   }
 
@@ -296,7 +305,7 @@ class Topic (val messagesApi: MessagesApi, val kafkaManagerContext: KafkaManager
               val partitions = tl.head._2.map(_.partitions).getOrElse(0)
               val readVersions = tl.map(t => t._2).flatMap(t => t).map(ti => ReadVersion(ti.topic, ti.readVersion))
               (defaultAddMultipleTopicsPartitionsForm.fill(AddMultipleTopicsPartitions(topics, bl.list.map(bi => BrokerSelect.from(bi)), partitions, readVersions)),
-               topicListExtended.clusterContext)
+                topicListExtended.clusterContext)
             }
           }
         })
@@ -365,7 +374,7 @@ class Topic (val messagesApi: MessagesApi, val kafkaManagerContext: KafkaManager
         addMultipleTopicsPartitions => {
           val topics = addMultipleTopicsPartitions.topics.filter(_.selected).map(_.name)
           val brokers = addMultipleTopicsPartitions.brokers.filter(_.selected).map(_.id).toSet
-          val readVersions = addMultipleTopicsPartitions.readVersions.map { rv => (rv.topic, rv.version)}.toMap
+          val readVersions = addMultipleTopicsPartitions.readVersions.map { rv => (rv.topic, rv.version) }.toMap
           kafkaManager.addMultipleTopicsPartitions(clusterName, topics, brokers, addMultipleTopicsPartitions.partitions, readVersions).map { errorOrSuccess =>
             implicit val clusterFeatures = errorOrSuccess.toOption.map(_.clusterFeatures).getOrElse(ClusterFeatures.default)
             Ok(views.html.common.resultOfCommand(
@@ -386,27 +395,27 @@ class Topic (val messagesApi: MessagesApi, val kafkaManagerContext: KafkaManager
     kafkaManager.getClusterConfig(clusterName).map { errorOrConfig =>
       errorOrConfig.map { clusterConfig =>
         val defaultConfigMap = clusterConfig.version match {
-          case Kafka_0_8_1_1 => TopicConfigs.configNames(Kafka_0_8_1_1).map(n => (n,TConfig(n,None))).toMap
-          case Kafka_0_8_2_0 => TopicConfigs.configNames(Kafka_0_8_2_0).map(n => (n,TConfig(n,None))).toMap
-          case Kafka_0_8_2_1 => TopicConfigs.configNames(Kafka_0_8_2_1).map(n => (n,TConfig(n,None))).toMap
-          case Kafka_0_8_2_2 => TopicConfigs.configNames(Kafka_0_8_2_2).map(n => (n,TConfig(n,None))).toMap
-          case Kafka_0_9_0_0 => TopicConfigs.configNames(Kafka_0_9_0_0).map(n => (n,TConfig(n,None))).toMap
-          case Kafka_0_9_0_1 => TopicConfigs.configNames(Kafka_0_9_0_1).map(n => (n,TConfig(n,None))).toMap
-          case Kafka_0_10_0_0 => TopicConfigs.configNames(Kafka_0_10_0_0).map(n => (n,TConfig(n,None))).toMap
-          case Kafka_0_10_0_1 => TopicConfigs.configNames(Kafka_0_10_0_1).map(n => (n,TConfig(n,None))).toMap
-          case Kafka_0_10_1_0 => TopicConfigs.configNames(Kafka_0_10_1_0).map(n => (n,TConfig(n,None))).toMap
-          case Kafka_0_10_1_1 => TopicConfigs.configNames(Kafka_0_10_1_1).map(n => (n,TConfig(n,None))).toMap
-          case Kafka_0_10_2_0 => TopicConfigs.configNames(Kafka_0_10_2_0).map(n => (n,TConfig(n,None))).toMap
-          case Kafka_0_10_2_1 => TopicConfigs.configNames(Kafka_0_10_2_1).map(n => (n,TConfig(n,None))).toMap
-          case Kafka_0_11_0_0 => TopicConfigs.configNames(Kafka_0_11_0_0).map(n => (n,TConfig(n,None))).toMap
-          case Kafka_0_11_0_2 => TopicConfigs.configNames(Kafka_0_11_0_2).map(n => (n,TConfig(n,None))).toMap
-          case Kafka_1_0_0 => TopicConfigs.configNames(Kafka_1_0_0).map(n => (n,TConfig(n,None))).toMap
-          case Kafka_1_0_1 => TopicConfigs.configNames(Kafka_1_0_0).map(n => (n,TConfig(n,None))).toMap
-          case Kafka_1_1_0 => TopicConfigs.configNames(Kafka_1_1_0).map(n => (n,TConfig(n,None))).toMap
+          case Kafka_0_8_1_1 => TopicConfigs.configNames(Kafka_0_8_1_1).map(n => (n, TConfig(n, None))).toMap
+          case Kafka_0_8_2_0 => TopicConfigs.configNames(Kafka_0_8_2_0).map(n => (n, TConfig(n, None))).toMap
+          case Kafka_0_8_2_1 => TopicConfigs.configNames(Kafka_0_8_2_1).map(n => (n, TConfig(n, None))).toMap
+          case Kafka_0_8_2_2 => TopicConfigs.configNames(Kafka_0_8_2_2).map(n => (n, TConfig(n, None))).toMap
+          case Kafka_0_9_0_0 => TopicConfigs.configNames(Kafka_0_9_0_0).map(n => (n, TConfig(n, None))).toMap
+          case Kafka_0_9_0_1 => TopicConfigs.configNames(Kafka_0_9_0_1).map(n => (n, TConfig(n, None))).toMap
+          case Kafka_0_10_0_0 => TopicConfigs.configNames(Kafka_0_10_0_0).map(n => (n, TConfig(n, None))).toMap
+          case Kafka_0_10_0_1 => TopicConfigs.configNames(Kafka_0_10_0_1).map(n => (n, TConfig(n, None))).toMap
+          case Kafka_0_10_1_0 => TopicConfigs.configNames(Kafka_0_10_1_0).map(n => (n, TConfig(n, None))).toMap
+          case Kafka_0_10_1_1 => TopicConfigs.configNames(Kafka_0_10_1_1).map(n => (n, TConfig(n, None))).toMap
+          case Kafka_0_10_2_0 => TopicConfigs.configNames(Kafka_0_10_2_0).map(n => (n, TConfig(n, None))).toMap
+          case Kafka_0_10_2_1 => TopicConfigs.configNames(Kafka_0_10_2_1).map(n => (n, TConfig(n, None))).toMap
+          case Kafka_0_11_0_0 => TopicConfigs.configNames(Kafka_0_11_0_0).map(n => (n, TConfig(n, None))).toMap
+          case Kafka_0_11_0_2 => TopicConfigs.configNames(Kafka_0_11_0_2).map(n => (n, TConfig(n, None))).toMap
+          case Kafka_1_0_0 => TopicConfigs.configNames(Kafka_1_0_0).map(n => (n, TConfig(n, None))).toMap
+          case Kafka_1_0_1 => TopicConfigs.configNames(Kafka_1_0_0).map(n => (n, TConfig(n, None))).toMap
+          case Kafka_1_1_0 => TopicConfigs.configNames(Kafka_1_1_0).map(n => (n, TConfig(n, None))).toMap
         }
-        val combinedMap = defaultConfigMap ++ ti.config.toMap.map(tpl => tpl._1 -> TConfig(tpl._1,Option(tpl._2)))
-        (defaultUpdateConfigForm.fill(UpdateTopicConfig(ti.topic,combinedMap.toList.map(_._2),ti.configReadVersion)),
-         ti.clusterContext)
+        val combinedMap = defaultConfigMap ++ ti.config.toMap.map(tpl => tpl._1 -> TConfig(tpl._1, Option(tpl._2)))
+        (defaultUpdateConfigForm.fill(UpdateTopicConfig(ti.topic, combinedMap.toList.map(_._2), ti.configReadVersion)),
+          ti.clusterContext)
       }
     }
   }

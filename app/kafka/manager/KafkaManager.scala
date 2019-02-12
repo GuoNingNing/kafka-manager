@@ -20,6 +20,7 @@ import kafka.manager.actor.cluster.KafkaManagedOffsetCacheConfig
 import kafka.manager.utils.UtilException
 import kafka.manager.utils.zero81.ReassignPartitionErrors.ReplicationOutOfSync
 import kafka.manager.utils.zero81.{ForceOnReplicationOutOfSync, ForceReassignmentCommand, ReassignPartitionErrors}
+import scalaz.\/
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
@@ -769,6 +770,16 @@ class KafkaManager(akkaConfig: Config) extends Logging {
     //    }
 
   }
+
+  def readTopic(clusterName: String, topic: String): Future[List[String]] = {
+    val futureReadTopicList = tryWithKafkaManagerActor(KMClusterQueryRequest(clusterName, KSReadTopic(topic)))(identity[List[String]])
+    implicit val ec = apiExecutionContext
+
+    futureReadTopicList.map { value =>
+      value.fold[List[String]]({ err: ApiError => List(err.msg) }, { logs => logs })
+    }
+  }
+
 
   def getGeneratedAssignments(clusterName: String, topic: String): Future[ApiError \/ GeneratedPartitionAssignments] = {
     tryWithKafkaManagerActor(KMClusterQueryRequest(clusterName, CMGetGeneratedPartitionAssignments(topic)))(
