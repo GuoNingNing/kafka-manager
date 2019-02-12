@@ -1345,10 +1345,7 @@ class KafkaStateActor(config: KafkaStateActorConfig) extends BaseClusterQueryCom
 
         val _sender = sender()
 
-        implicit val ec = context.dispatcher
-        log.info(s"read topic $topic")
-
-        val kafkaConsumer = consumerCache.getOrElseUpdate(s"${config.clusterContext.config.name}#$topic", {
+        val kafkaConsumer = consumerCache.getOrElseUpdate(s"${config.clusterContext.config.name}", {
           val props: Properties = new Properties()
           props.put(GROUP_ID_CONFIG, s"KSReadTopic")
           props.put(BOOTSTRAP_SERVERS_CONFIG, config.clusterContext.config.curatorConfig.zkConnect.replace("2181", "9092"))
@@ -1360,19 +1357,20 @@ class KafkaStateActor(config: KafkaStateActorConfig) extends BaseClusterQueryCom
 
           new KafkaConsumer(props)
         })
-
+        //        kafkaConsumer.unsubscribe()
         kafkaConsumer.subscribe(Set(topic))
+        log.info(s"read ${config.clusterContext.config.name} topic $topic")
 
         var i = 0
         var count = 0
         val logs = new ArrayBuffer[String]()
         while (i < 10 && logs.size < 10) {
-          kafkaConsumer.poll(100).asScala.foreach(x => {
-            println(x.value())
+          kafkaConsumer.poll(100).asScala.take(10).foreach(x => {
             logs.add(x.value())
           })
+          i = i + 1
         }
-        _sender ! logs.take(10).toList
+        _sender ! logs.toList
 
       case KSGetTopics =>
         val deleteSet: Set[String] =

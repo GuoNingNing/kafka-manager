@@ -102,7 +102,7 @@ object KafkaManager {
       ThreadPoolSize -> "2",
       MutexTimeoutMillis -> "4000",
       StartDelayMillis -> "1000",
-      ApiTimeoutMillis -> "5000",
+      ApiTimeoutMillis -> "30000",
       ClusterActorsAskTimeoutMillis -> "2000",
       PartitionOffsetCacheTimeoutSecs -> "5",
       SimpleConsumerSocketTimeoutMillis -> "10000",
